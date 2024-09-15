@@ -30,22 +30,22 @@ def get_orders(item_url_name):
     return orders
 
 
-def find_biggest_difference(num_items):
+def find_biggest_difference(num_items, filter_string):
     items = get_items()
     if not items:
         return
 
-    # Filter items to only include those with 'prime' in the name
-    prime_items = [item for item in items if 'prime' in item['item_name'].lower()]
+    # Filter items to only include those with the filter_string in the name
+    filtered_items = [item for item in items if filter_string.lower() in item['item_name'].lower()]
 
     # Determine the number of items to process
     if num_items == 'all':
-        selected_items = prime_items
+        selected_items = filtered_items
     else:
         num_items = int(num_items)
-        selected_items = random.sample(prime_items, num_items)
+        selected_items = random.sample(filtered_items, num_items)
 
-    print(f"Processing {len(selected_items)} items out of {len(prime_items)} prime items.")
+    print(f"Processing {len(selected_items)} items out of {len(filtered_items)} filtered items.")
 
     differences = []
 
@@ -84,15 +84,16 @@ def find_biggest_difference(num_items):
 
 
 if __name__ == "__main__":
+    filter_string = input("Enter the string that the item name should contain: ")
     print("Select the number of items to process:")
     print("1. All items")
     print("2. Specify the number of items")
     choice = input("Enter your choice (1 or 2): ")
 
     if choice == '1':
-        find_biggest_difference('all')
+        find_biggest_difference('all', filter_string)
     elif choice == '2':
         num_items = input("Enter the number of items to process: ")
-        find_biggest_difference(num_items)
+        find_biggest_difference(num_items, filter_string)
     else:
         print("Invalid choice. Please run the program again and select a valid option.")
