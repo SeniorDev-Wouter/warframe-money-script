@@ -1,17 +1,19 @@
 import requests
+import random
 import time
 
-# List of the 30 most expensive items (replace with actual item URL names)
-most_expensive_items = [
-    "primed_chamber", "artax_riven_mod", "phased_ankyros_skin", "phased_tigris_skin",
-    "rubedo_plated_viper_skin", "primed_fury", "primed_continuity", "primed_flow",
-    "primed_point_blank", "primed_target_cracker", "primed_pistol_gambit", "primed_ravage",
-    "primed_heavy_trauma", "primed_pressure_point", "primed_bane_of_corpus", "primed_bane_of_grineer",
-    "primed_bane_of_infested", "primed_bane_of_corrupted", "primed_charged_shell", "primed_cryo_rounds",
-    "primed_fast_hands", "primed_pistol_ammo_mutation", "primed_rifle_ammo_mutation", "primed_shotgun_ammo_mutation",
-    "primed_sniper_ammo_mutation", "primed_tactical_pump", "primed_vigor", "primed_shred",
-    "primed_sure_footed", "primed_pack_leader"
-]
+
+def get_items():
+    url = "https://api.warframe.market/v1/items"
+    response = requests.get(url)
+
+    if response.status_code != 200:
+        print(f"Failed to fetch items. HTTP Status code: {response.status_code}")
+        return []
+
+    data = response.json()
+    items = data.get('payload', {}).get('items', [])
+    return items
 
 
 def get_orders(item_url_name):
@@ -27,10 +29,28 @@ def get_orders(item_url_name):
     return orders
 
 
-def find_biggest_difference():
+def find_biggest_difference(num_items):
+    items = get_items()
+    if not items:
+        return
+
+    # Filter items to only include those with 'prime' in the name
+    prime_items = [item for item in items if 'prime' in item['item_name'].lower()]
+
+    # Determine the number of items to process
+    if num_items == 'all':
+        selected_items = prime_items
+    else:
+        num_items = int(num_items)
+        selected_items = random.sample(prime_items, num_items)
+
+    print(f"Processing {len(selected_items)} items out of {len(prime_items)} prime items.")
+
     differences = []
 
-    for item_url_name in most_expensive_items:
+    for item in selected_items:
+        item_url_name = item['url_name']
+        print(f"Processing item: {item['item_name']}")  # Print the item being processed
         orders = get_orders(item_url_name)
 
         buy_orders = [order for order in orders if order['order_type'] == 'buy' and order['user']['status'] == 'ingame']
@@ -45,21 +65,32 @@ def find_biggest_difference():
 
         difference = highest_buy_order['platinum'] - lowest_sell_order['platinum']
 
-        differences.append((difference, item_url_name, highest_buy_order, lowest_sell_order))
+        differences.append((difference, item, highest_buy_order, lowest_sell_order))
 
         # Introduce a delay between requests
-        time.sleep(1)
+        time.sleep(0.3)
 
     # Sort by difference and get the top 3
     differences.sort(reverse=True, key=lambda x: x[0])
     top_3 = differences[:3]
 
-    for diff, item_url_name, buy_order, sell_order in top_3:
-        print(f"Item: {item_url_name}")
+    for diff, item, buy_order, sell_order in top_3:
+        print(f"Item: {item['item_name']}")
         print(f"Highest buy order: {buy_order['platinum']} platinum by {buy_order['user']['ingame_name']}")
         print(f"Lowest sell order: {sell_order['platinum']} platinum by {sell_order['user']['ingame_name']}")
         print(f"Difference: {diff} platinum\n")
 
 
 if __name__ == "__main__":
-    find_biggest_difference()
+    print("Select the number of items to process:")
+    print("1. All items")
+    print("2. Specify the number of items")
+    choice = input("Enter your choice (1 or 2): ")
+
+    if choice == '1':
+        find_biggest_difference('all')
+    elif choice == '2':
+        num_items = input("Enter the number of items to process: ")
+        find_biggest_difference(num_items)
+    else:
+        print("Invalid choice. Please run the program again and select a valid option.")
