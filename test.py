@@ -1,6 +1,7 @@
 import requests
 import random
 import time
+from tqdm import tqdm  # Import tqdm for the loading bar
 
 
 def get_items():
@@ -48,9 +49,9 @@ def find_biggest_difference(num_items):
 
     differences = []
 
-    for item in selected_items:
+    # Use tqdm to create a loading bar
+    for item in tqdm(selected_items, desc="Processing items", unit="item"):
         item_url_name = item['url_name']
-        print(f"Processing item: {item['item_name']}")  # Print the item being processed
         orders = get_orders(item_url_name)
 
         buy_orders = [order for order in orders if order['order_type'] == 'buy' and order['user']['status'] == 'ingame']
@@ -65,16 +66,17 @@ def find_biggest_difference(num_items):
 
         difference = highest_buy_order['platinum'] - lowest_sell_order['platinum']
 
-        differences.append((difference, item, highest_buy_order, lowest_sell_order))
+        if difference > 0:
+            differences.append((difference, item, highest_buy_order, lowest_sell_order))
 
         # Introduce a delay between requests
-        time.sleep(0.3)
+        time.sleep(0.2)
 
-    # Sort by difference and get the top 3
+    # Sort by difference and get the top 10
     differences.sort(reverse=True, key=lambda x: x[0])
-    top_3 = differences[:3]
+    top_10 = differences[:10]
 
-    for diff, item, buy_order, sell_order in top_3:
+    for diff, item, buy_order, sell_order in top_10:
         print(f"Item: {item['item_name']}")
         print(f"Highest buy order: {buy_order['platinum']} platinum by {buy_order['user']['ingame_name']}")
         print(f"Lowest sell order: {sell_order['platinum']} platinum by {sell_order['user']['ingame_name']}")
