@@ -3,7 +3,6 @@ import random
 import time
 from tqdm import tqdm  # Import tqdm for the loading bar
 
-
 def get_items():
     url = "https://api.warframe.market/v1/items"
     response = requests.get(url)
@@ -16,7 +15,6 @@ def get_items():
     items = data.get('payload', {}).get('items', [])
     return items
 
-
 def get_orders(item_url_name):
     url = f"https://api.warframe.market/v1/items/{item_url_name}/orders"
     response = requests.get(url)
@@ -28,7 +26,6 @@ def get_orders(item_url_name):
     data = response.json()
     orders = data.get('payload', {}).get('orders', [])
     return orders
-
 
 def find_biggest_difference(num_items, filter_string):
     items = get_items()
@@ -54,20 +51,30 @@ def find_biggest_difference(num_items, filter_string):
         item_url_name = item['url_name']
         orders = get_orders(item_url_name)
 
-        buy_orders = [order for order in orders if order['order_type'] == 'buy' and order['user']['status'] == 'ingame']
-        sell_orders = [order for order in orders if
-                       order['order_type'] == 'sell' and order['user']['status'] == 'ingame']
+        # Group orders by rank
+        orders_by_rank = {}
+        for order in orders:
+            rank = order.get('mod_rank', 0)
+            if rank not in orders_by_rank:
+                orders_by_rank[rank] = {'buy': [], 'sell': []}
+            if order['order_type'] == 'buy' and order['user']['status'] == 'ingame':
+                orders_by_rank[rank]['buy'].append(order)
+            elif order['order_type'] == 'sell' and order['user']['status'] == 'ingame':
+                orders_by_rank[rank]['sell'].append(order)
 
-        if not buy_orders or not sell_orders:
-            continue
+        # Compare orders within the same rank
+        for rank, rank_orders in orders_by_rank.items():
+            buy_orders = rank_orders['buy']
+            sell_orders = rank_orders['sell']
 
-        highest_buy_order = max(buy_orders, key=lambda x: x['platinum'])
-        lowest_sell_order = min(sell_orders, key=lambda x: x['platinum'])
+            if not buy_orders or not sell_orders:
+                continue
 
-        difference = highest_buy_order['platinum'] - lowest_sell_order['platinum']
+            highest_buy_order = max(buy_orders, key=lambda x: x['platinum'])
+            lowest_sell_order = min(sell_orders, key=lambda x: x['platinum'])
 
-        if difference > 0:
-            differences.append((difference, item, highest_buy_order, lowest_sell_order))
+            difference = highest_buy_order['platinum'] - lowest_sell_order['platinum']
+            differences.append((difference, item, highest_buy_order, lowest_sell_order, rank))
 
         # Introduce a delay between requests
         time.sleep(0.25)
@@ -76,12 +83,11 @@ def find_biggest_difference(num_items, filter_string):
     differences.sort(reverse=True, key=lambda x: x[0])
     top_10 = differences[:10]
 
-    for diff, item, buy_order, sell_order in top_10:
-        print(f"Item: {item['item_name']}")
+    for diff, item, buy_order, sell_order, rank in top_10:
+        print(f"Item: {item['item_name']} (Rank: {rank})")
         print(f"Highest buy order: {buy_order['platinum']} platinum by {buy_order['user']['ingame_name']}")
         print(f"Lowest sell order: {sell_order['platinum']} platinum by {sell_order['user']['ingame_name']}")
         print(f"Difference: {diff} platinum\n")
-
 
 if __name__ == "__main__":
     filter_string = input("Enter the string that the item name should contain: ")
