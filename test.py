@@ -70,7 +70,7 @@ def find_biggest_difference(num_items, filter_string):
             differences.append((difference, item, highest_buy_order, lowest_sell_order))
 
         # Introduce a delay between requests
-        time.sleep(0.2)
+        time.sleep(0.25)
 
     # Sort by difference and get the top 10
     differences.sort(reverse=True, key=lambda x: x[0])
